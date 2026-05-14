@@ -11,14 +11,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# New Discord webhook - can be overridden via environment variable
-DISCORD_WEBHOOK_URL = os.getenv(
-    "DISCORD_WEBHOOK_URL",
-    "https://discord.com/api/webhooks/1469773238874931468/Dvzw-vmOR84_1v06PGzN9td844HGeX7fzEvvmD6gmQuYlKQjFuGqxI6IuApEEIQ-X1kf"
-)
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "").strip()
 
-# Discord user ID for mentions (set in .env as DISCORD_USER_ID)
-# To find your ID: Enable Developer Mode in Discord, right-click your name, "Copy ID"
 DISCORD_USER_ID = os.getenv("DISCORD_USER_ID")
 
 
@@ -26,13 +20,15 @@ def get_mention() -> str:
     """Get the mention string for notifications."""
     if DISCORD_USER_ID:
         return f"<@{DISCORD_USER_ID}> "
-    return ""  # No mention if user ID not set
+    return ""
 
 
 def send_message(content: str, username: str = "Biotech Bot", mention: bool = True) -> bool:
     """Send a simple text message to Discord."""
+    if not DISCORD_WEBHOOK_URL:
+        print("  [DISCORD] DISCORD_WEBHOOK_URL not set; skipping message")
+        return False
     try:
-        # Prepend mention if enabled and user ID is set
         if mention:
             content = get_mention() + content
         

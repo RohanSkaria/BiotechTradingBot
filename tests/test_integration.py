@@ -129,13 +129,12 @@ def test_discord() -> bool:
     """Test Discord webhook connection."""
     try:
         import requests
-        
-        webhook_url = os.getenv(
-            "DISCORD_WEBHOOK_URL",
-            "https://discord.com/api/webhooks/1469773238874931468/Dvzw-vmOR84_1v06PGzN9td844HGeX7fzEvvmD6gmQuYlKQjFuGqxI6IuApEEIQ-X1kf"
-        )
-        
-        # Send a test message
+
+        webhook_url = (os.getenv("DISCORD_WEBHOOK_URL") or "").strip()
+        if not webhook_url:
+            print("❌ Discord Webhook: DISCORD_WEBHOOK_URL not set in .env")
+            return False
+
         payload = {
             "content": f"🔔 **Heartbeat Test** - Integration check at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
             "username": "Heartbeat Bot"

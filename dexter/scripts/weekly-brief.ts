@@ -5,9 +5,6 @@ import { runAgentForMessage } from '../src/gateway/agent-runner.js';
 
 config({ quiet: true });
 
-const DEFAULT_DISCORD_WEBHOOK =
-  'https://discord.com/api/webhooks/1469773238874931468/Dvzw-vmOR84_1v06PGzN9td844HGeX7fzEvvmD6gmQuYlKQjFuGqxI6IuApEEIQ-X1kf';
-
 type WeeklySignal = {
   ticker: string;
   direction: 'long' | 'short' | 'skip';
@@ -89,7 +86,10 @@ async function fetchActiveWatchlist(): Promise<WatchlistRow[]> {
 }
 
 async function sendDiscordMessage(content: string): Promise<void> {
-  const webhook = process.env.DISCORD_WEBHOOK_URL || DEFAULT_DISCORD_WEBHOOK;
+  const webhook = (process.env.DISCORD_WEBHOOK_URL || '').trim();
+  if (!webhook) {
+    throw new Error('DISCORD_WEBHOOK_URL is required (set it in dexter/.env)');
+  }
   const response = await fetch(webhook, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
