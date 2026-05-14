@@ -1,0 +1,7 @@
+google-genai
+yfinance>=0.2.40
+requests
+apscheduler
+pyyaml
+python-dotenv
+psycopg2-binary>=2.9.9

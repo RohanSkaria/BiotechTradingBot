@@ -1,0 +1,187 @@
+{
+  "classifications": [
+    {
+      "ticker": "LLY",
+      "date": "2025-02-06",
+      "headline": "LLY: Eli Lilly 8-K filed 2025-02-06 - 8-K",
+      "category": "Other",
+      "sentiment": "Neutral",
+      "confidence": 95,
+      "affected_tickers": [
+        "LLY"
+      ],
+      "model_used": "gemini-2.5-flash-lite",
+      "filter_score": 0,
+      "filter_direction": "neutral"
+    },
+    {
+      "ticker": "VRTX",
+      "date": "2025-02-10",
+      "headline": "VRTX: Vertex Pharmaceuticals 8-K filed 2025-02-10 - 8-K",
+      "category": "Other",
+      "sentiment": "Neutral",
+      "confidence": 95,
+      "affected_tickers": [
+        "VRTX"
+      ],
+      "model_used": "gemini-2.5-flash-lite",
+      "filter_score": 0,
+      "filter_direction": "neutral"
+    },
+    {
+      "ticker": "CRSP",
+      "date": "2025-02-11",
+      "headline": "CRSP: CRISPR Therapeutics 8-K filed 2025-02-11 - 8-K",
+      "category": "Other",
+      "sentiment": "Neutral",
+      "confidence": 95,
+      "affected_tickers": [
+        "CRSP"
+      ],
+      "model_used": "gemini-2.5-flash-lite",
+      "filter_score": 0,
+      "filter_direction": "neutral"
+    },
+    {
+      "ticker": "LLY",
+      "date": "2025-02-12",
+      "headline": "LLY: Eli Lilly 8-K filed 2025-02-12 - 8-K",
+      "category": "Other",
+      "sentiment": "Neutral",
+      "confidence": 95,
+      "affected_tickers": [
+        "LLY"
+      ],
+      "model_used": "gemini-2.5-flash-lite",
+      "filter_score": 0,
+      "filter_direction": "neutral"
+    },
+    {
+      "ticker": "GILD",
+      "date": "2025-02-26",
+      "headline": "GILD: Gilead Sciences 8-K filed 2025-02-26 - 8-K",
+      "category": "Other",
+      "sentiment": "Neutral",
+      "confidence": 95,
+      "affected_tickers": [
+        "GILD"
+      ],
+      "model_used": "gemini-2.5-flash-lite",
+      "filter_score": 0,
+      "filter_direction": "neutral"
+    },
+    {
+      "ticker": "GILD",
+      "date": "2025-02-26",
+      "headline": "GILD: Gilead Sciences 8-K filed 2025-02-26 - 8-K",
+      "category": "Other",
+      "sentiment": "Neutral",
+      "confidence": 95,
+      "affected_tickers": [
+        "GILD"
+      ],
+      "model_used": "gemini-2.5-flash-lite",
+      "filter_score": 0,
+      "filter_direction": "neutral"
+    }
+  ],
+  "evaluations": [
+    {
+      "ticker": "LLY",
+      "event_date": "2025-02-06",
+      "predicted_sentiment": "Neutral",
+      "expected_direction": 0,
+      "actual_return_pct": 0.91,
+      "correct": "True",
+      "magnitude": 0.91,
+      "simulated_pnl_pct": 0.0,
+      "price_at_event": 863.93,
+      "volume": 7138500,
+      "headline": "LLY: Eli Lilly 8-K filed 2025-02-06 - 8-K",
+      "category": "Other",
+      "confidence": 95
+    },
+    {
+      "ticker": "VRTX",
+      "event_date": "2025-02-10",
+      "predicted_sentiment": "Neutral",
+      "expected_direction": 0,
+      "actual_return_pct": -3.14,
+      "correct": "False",
+      "magnitude": 3.14,
+      "simulated_pnl_pct": 0.0,
+      "price_at_event": 469.97,
+      "volume": 1759600,
+      "headline": "VRTX: Vertex Pharmaceuticals 8-K filed 2025-02-10 - 8-K",
+      "category": "Other",
+      "confidence": 95
+    },
+    {
+      "ticker": "CRSP",
+      "event_date": "2025-02-11",
+      "predicted_sentiment": "Neutral",
+      "expected_direction": 0,
+      "actual_return_pct": 9.29,
+      "correct": "False",
+      "magnitude": 9.29,
+      "simulated_pnl_pct": 0.0,
+      "price_at_event": 39.62,
+      "volume": 2027700,
+      "headline": "CRSP: CRISPR Therapeutics 8-K filed 2025-02-11 - 8-K",
+      "category": "Other",
+      "confidence": 95
+    },
+    {
+      "ticker": "LLY",
+      "event_date": "2025-02-12",
+      "predicted_sentiment": "Neutral",
+      "expected_direction": 0,
+      "actual_return_pct": -0.13,
+      "correct": "True",
+      "magnitude": 0.13,
+      "simulated_pnl_pct": 0.0,
+      "price_at_event": 866.51,
+      "volume": 2533400,
+      "headline": "LLY: Eli Lilly 8-K filed 2025-02-12 - 8-K",
+      "category": "Other",
+      "confidence": 95
+    },
+    {
+      "ticker": "GILD",
+      "event_date": "2025-02-26",
+      "predicted_sentiment": "Neutral",
+      "expected_direction": 0,
+      "actual_return_pct": 1.39,
+      "correct": "False",
+      "magnitude": 1.39,
+      "simulated_pnl_pct": 0.0,
+      "price_at_event": 107.46,
+      "volume": 5911200,
+      "headline": "GILD: Gilead Sciences 8-K filed 2025-02-26 - 8-K",
+      "category": "Other",
+      "confidence": 95
+    },
+    {
+      "ticker": "GILD",
+      "event_date": "2025-02-26",
+      "predicted_sentiment": "Neutral",
+      "expected_direction": 0,
+      "actual_return_pct": 1.39,
+      "correct": "False",
+      "magnitude": 1.39,
+      "simulated_pnl_pct": 0.0,
+      "price_at_event": 107.46,
+      "volume": 5911200,
+      "headline": "GILD: Gilead Sciences 8-K filed 2025-02-26 - 8-K",
+      "category": "Other",
+      "confidence": 95
+    }
+  ],
+  "summary": {
+    "total_filings": 49,
+    "skipped_filter": 0,
+    "skipped_api": 43,
+    "classified": 6,
+    "evaluated": 6
+  }
+}

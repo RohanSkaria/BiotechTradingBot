@@ -1,0 +1,76 @@
+# Biotech Trading Bot Watchlist
+# Core biotech tickers with CIK numbers for SEC EDGAR
+#
+# To find a CIK: https://www.sec.gov/cgi-bin/browse-edgar?company=&CIK=TICKER
+
+watchlists:
+  core_biotech:
+    - ticker: "LLY"
+      cik: "0000059478"
+      name: "Eli Lilly"
+      focus: "Obesity/Alzheimer's"
+      market_cap_tier: "large"    # >$100B
+      volatility: "low"
+
+    - ticker: "VRTX"
+      cik: "0000875320"
+      name: "Vertex Pharmaceuticals"
+      focus: "Rare Disease/Pain"
+      market_cap_tier: "large"
+      volatility: "medium"
+
+    - ticker: "CRSP"
+      cik: "0001674416"
+      name: "CRISPR Therapeutics"
+      focus: "Gene Editing"
+      market_cap_tier: "mid"      # $10B-$100B
+      volatility: "high"
+
+    - ticker: "REGN"
+      cik: "0000872589"
+      name: "Regeneron"
+      focus: "Antibodies/Oncology"
+      market_cap_tier: "large"
+      volatility: "medium"
+
+    - ticker: "AMGN"
+      cik: "0000318154"
+      name: "Amgen"
+      focus: "Obesity/Immunology"
+      market_cap_tier: "large"
+      volatility: "low"
+
+    - ticker: "GILD"
+      cik: "0000882095"
+      name: "Gilead Sciences"
+      focus: "HIV/Oncology"
+      market_cap_tier: "large"
+      volatility: "low"
+
+# Market cap tier definitions (for stop-loss calculation)
+# large: >$100B market cap, typically lower volatility
+# mid: $10B-$100B market cap, moderate volatility  
+# small: <$10B market cap, higher volatility
+
+# Stop-loss tiers (dynamic based on market cap + volatility)
+stop_loss_tiers:
+  large_low:     0.08   # 8% - Large cap, low volatility (LLY, AMGN, GILD)
+  large_medium:  0.10   # 10% - Large cap, medium volatility (VRTX, REGN)
+  mid_high:      0.15   # 15% - Mid cap, high volatility (CRSP)
+  default:       0.10   # 10% - Fallback
+
+# Therapeutic area groupings for cross-company detection
+therapeutic_areas:
+  "Obesity":
+    - LLY
+    - AMGN
+  "Gene Editing":
+    - CRSP
+  "Oncology":
+    - REGN
+    - GILD
+  "Rare Disease":
+    - VRTX
+  "Immunology":
+    - AMGN
+    - REGN

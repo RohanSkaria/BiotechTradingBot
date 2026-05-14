@@ -1,0 +1,26 @@
+# Environment
+.env
+.env.*
+!.env.example
+dexter/.env
+dexter/.dexter/
+dexter/node_modules/
+venv/
+__pycache__/
+*.pyc
+
+# Data
+data/*.db
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

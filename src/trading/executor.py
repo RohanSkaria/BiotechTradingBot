@@ -1,0 +1,187 @@
+"""
+Alpaca Paper Trading Executor
+
+Submits buy/sell orders via the Alpaca REST API.
+Uses direct HTTP requests (not the alpaca-trade-api SDK) for simplicity
+and to avoid websocket version conflicts.
+"""
+
+import os
+import requests
+from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+
+ALPACA_BASE_URL = "https://paper-api.alpaca.markets"
+ALPACA_KEY = os.getenv("ALPACA_KEY")
+ALPACA_SECRET = os.getenv("ALPACA_SECRET")
+
+HEADERS = {
+    "APCA-API-KEY-ID": ALPACA_KEY or "",
+    "APCA-API-SECRET-KEY": ALPACA_SECRET or "",
+    "Content-Type": "application/json",
+}
+
+
+def get_account() -> Optional[dict]:
+    """Get account info from Alpaca."""
+    try:
+        resp = requests.get(f"{ALPACA_BASE_URL}/v2/account", headers=HEADERS, timeout=10)
+        if resp.status_code == 200:
+            return resp.json()
+        print(f"  [ALPACA] Account error: {resp.status_code} {resp.text[:200]}")
+        return None
+    except Exception as e:
+        print(f"  [ALPACA] Account exception: {e}")
+        return None
+
+
+def get_portfolio_value() -> float:
+    """Get current portfolio value."""
+    account = get_account()
+    if account:
+        return float(account.get("portfolio_value", 0))
+    return 0.0
+
+
+def get_position(ticker: str) -> Optional[dict]:
+    """Get current position for a ticker, or None if no position."""
+    try:
+        resp = requests.get(
+            f"{ALPACA_BASE_URL}/v2/positions/{ticker}",
+            headers=HEADERS, timeout=10
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        return None  # 404 = no position
+    except Exception:
+        return None
+
+
+def get_all_positions() -> list:
+    """Get all open positions."""
+    try:
+        resp = requests.get(f"{ALPACA_BASE_URL}/v2/positions", headers=HEADERS, timeout=10)
+        if resp.status_code == 200:
+            return resp.json()
+        return []
+    except Exception:
+        return []
+
+
+def get_latest_price(ticker: str) -> Optional[float]:
+    """Get latest trade price from Alpaca data API."""
+    try:
+        resp = requests.get(
+            f"https://data.alpaca.markets/v2/stocks/{ticker}/trades/latest",
+            headers=HEADERS, timeout=10
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            return float(data.get("trade", {}).get("p", 0))
+        return None
+    except Exception:
+        return None
+
+
+def submit_order(
+    ticker: str,
+    qty: float,
+    side: str,  # "buy" or "sell"
+    order_type: str = "market",
+    time_in_force: str = "ioc",  # Changed to IOC for biotech safety
+    limit_price: float = None,
+) -> Optional[dict]:
+    """
+    Submit an order to Alpaca paper trading.
+
+    SAFETY: Uses IOC (Immediate or Cancel) by default to prevent slippage
+    on low-volume biotech stocks. If the order can't be filled immediately
+    at a reasonable price, it cancels instead of sitting in the order book.
+
+    Args:
+        ticker: Stock symbol
+        qty: Number of shares (can be fractional)
+        side: "buy" or "sell"
+        order_type: "market", "limit", etc.
+        time_in_force: "ioc" (default), "fok", "day", "gtc"
+            - ioc: Immediate or Cancel - fills what it can immediately, cancels rest
+            - fok: Fill or Kill - must fill entire order or cancel
+            - day: Good for the day
+        limit_price: Required for limit orders
+
+    Returns:
+        Order response dict, or None on error.
+    """
+    payload = {
+        "symbol": ticker,
+        "qty": str(qty),
+        "side": side,
+        "type": order_type,
+        "time_in_force": time_in_force,
+    }
+
+    # Add limit price if provided (for limit orders)
+    if limit_price is not None and order_type == "limit":
+        payload["limit_price"] = str(limit_price)
+
+    try:
+        resp = requests.post(
+            f"{ALPACA_BASE_URL}/v2/orders",
+            headers=HEADERS, json=payload, timeout=10
+        )
+        if resp.status_code in (200, 201):
+            order = resp.json()
+            status = order.get('status', 'unknown')
+            filled_qty = order.get('filled_qty', '0')
+            print(f"  [ALPACA] Order submitted: {side} {qty} {ticker} "
+                  f"(TIF={time_in_force}) -> {order.get('id', 'N/A')[:8]}... "
+                  f"status={status}, filled={filled_qty}")
+            return order
+        else:
+            print(f"  [ALPACA] Order error: {resp.status_code} {resp.text[:300]}")
+            return None
+    except Exception as e:
+        print(f"  [ALPACA] Order exception: {e}")
+        return None
+
+
+def submit_limit_order(
+    ticker: str,
+    qty: float,
+    side: str,
+    limit_price: float,
+    time_in_force: str = "ioc",
+) -> Optional[dict]:
+    """
+    Submit a limit order with price protection.
+    
+    Use this for volatile biotech stocks where market orders could slip badly.
+    The limit_price acts as a "worst acceptable price" - the order will fill
+    at limit_price or better, or cancel if the market has moved too far.
+    """
+    return submit_order(
+        ticker=ticker,
+        qty=qty,
+        side=side,
+        order_type="limit",
+        time_in_force=time_in_force,
+        limit_price=limit_price,
+    )
+
+
+def close_position(ticker: str) -> Optional[dict]:
+    """Close an entire position in a ticker."""
+    try:
+        resp = requests.delete(
+            f"{ALPACA_BASE_URL}/v2/positions/{ticker}",
+            headers=HEADERS, timeout=10
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        print(f"  [ALPACA] Close error: {resp.status_code} {resp.text[:200]}")
+        return None
+    except Exception as e:
+        print(f"  [ALPACA] Close exception: {e}")
+        return None
