@@ -93,3 +93,59 @@ def run_dexter_weekly_brief(timeout_seconds: int = 1200) -> Dict:
             "stderr": f"Timed out after {timeout_seconds}s",
             "code": -2,
         }
+
+
+def run_dexter_daily_pulse(timeout_seconds: int = 600) -> Dict:
+    """
+    Invoke Dexter's daily-pulse script using Bun.
+
+    Returns:
+      {
+        "ok": bool,
+        "tickers": list[str],
+        "stdout": str,
+        "stderr": str,
+        "code": int,
+      }
+    """
+    dexter_path = _dexter_dir()
+    if not os.path.isdir(dexter_path):
+        return {
+            "ok": False,
+            "tickers": [],
+            "stdout": "",
+            "stderr": f"Dexter directory not found: {dexter_path}",
+            "code": -1,
+        }
+
+    tickers = get_weekly_brief_tickers()
+    cmd = ["bun", "run", "scripts/daily-pulse.ts"]
+    env = os.environ.copy()
+    env.setdefault("DAILY_PULSE_MODEL", "gemini-2.5-flash")
+    if (not env.get("GOOGLE_API_KEY")) and env.get("GEMINI_API_KEY"):
+        env["GOOGLE_API_KEY"] = env["GEMINI_API_KEY"]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=dexter_path,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+        return {
+            "ok": result.returncode == 0,
+            "tickers": tickers,
+            "stdout": result.stdout or "",
+            "stderr": result.stderr or "",
+            "code": result.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "ok": False,
+            "tickers": tickers,
+            "stdout": "",
+            "stderr": f"Timed out after {timeout_seconds}s",
+            "code": -2,
+        }

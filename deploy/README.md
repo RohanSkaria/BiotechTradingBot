@@ -75,6 +75,9 @@ cd dexter && bun run scripts/test-yahoo-tool.ts AAPL
 
 # Watchlist manager (reads/writes Neon)
 bun run scripts/test-manage-watchlist.ts
+
+# Daily pulse driver (free delta report + Discord + Neon)
+bun run scripts/daily-pulse.ts
 ```
 
 ## Updating the deployment
@@ -102,5 +105,6 @@ sudo systemctl restart biotech-bot
 |---|---|
 | Clinical Tracker | Every 6 hours (interval) |
 | Dexter Weekly Brief | Monday 6:00 AM America/New_York |
+| Dexter Daily Pulse | Tue-Fri 6:30 AM America/New_York |
 
 All managed by APScheduler in [`src/main.py`](../src/main.py).

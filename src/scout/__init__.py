@@ -10,7 +10,11 @@ Components:
 from .weekly_poll import run_weekly_scout
 from .clinical_tracker import check_trial_status, discover_and_add_trials
 from .weekly_discovery import run_weekly_discovery
-from .dexter_bridge import run_dexter_weekly_brief, get_weekly_brief_tickers
+from .dexter_bridge import (
+    run_dexter_weekly_brief,
+    run_dexter_daily_pulse,
+    get_weekly_brief_tickers,
+)
 
 __all__ = [
     'run_weekly_scout',
@@ -18,5 +22,6 @@ __all__ = [
     'discover_and_add_trials', 
     'run_weekly_discovery',
     'run_dexter_weekly_brief',
+    'run_dexter_daily_pulse',
     'get_weekly_brief_tickers',
 ]

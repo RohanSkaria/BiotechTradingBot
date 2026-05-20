@@ -2,6 +2,13 @@
 import { config } from 'dotenv';
 import { Client } from 'pg';
 import { runAgentForMessage } from '../src/gateway/agent-runner.js';
+import {
+  chunkMessage,
+  extractJsonPayload,
+  fetchActiveWatchlist,
+  sendDiscordMessage,
+  type WatchlistRow,
+} from './lib/brief-utils.js';
 
 config({ quiet: true });
 
@@ -17,13 +24,6 @@ type WeeklySignal = {
 type WeeklyBriefPayload = {
   week_of: string;
   signals: WeeklySignal[];
-};
-
-type WatchlistRow = {
-  ticker: string;
-  company_name: string | null;
-  expected_catalyst: string | null;
-  discovery_source: string | null;
 };
 
 function getMondayIso(date = new Date()): string {
@@ -45,80 +45,6 @@ function getWeekLabel(weekOf: string): string {
   });
 }
 
-function extractJsonPayload(text: string): WeeklyBriefPayload {
-  const match = text.match(/```json\s*([\s\S]*?)\s*```/g);
-  if (!match || match.length === 0) {
-    throw new Error('No JSON code block found in agent response');
-  }
-  const last = match[match.length - 1];
-  const jsonMatch = last.match(/```json\s*([\s\S]*?)\s*```/);
-  if (!jsonMatch) {
-    throw new Error('Failed to parse JSON code block');
-  }
-
-  const payload = JSON.parse(jsonMatch[1]) as WeeklyBriefPayload;
-  if (!payload.week_of || !Array.isArray(payload.signals)) {
-    throw new Error('Invalid JSON payload shape');
-  }
-  return payload;
-}
-
-async function fetchActiveWatchlist(): Promise<WatchlistRow[]> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) return [];
-  const client = new Client({ connectionString: databaseUrl });
-  await client.connect();
-  try {
-    const result = await client.query<WatchlistRow>(
-      `SELECT ticker, company_name, expected_catalyst, discovery_source
-       FROM weekly_watchlist
-       WHERE active = TRUE`,
-    );
-    return result.rows.map((r) => ({
-      ticker: (r.ticker || '').toUpperCase(),
-      company_name: r.company_name,
-      expected_catalyst: r.expected_catalyst,
-      discovery_source: r.discovery_source,
-    }));
-  } finally {
-    await client.end();
-  }
-}
-
-async function sendDiscordMessage(content: string): Promise<void> {
-  const webhook = (process.env.DISCORD_WEBHOOK_URL || '').trim();
-  if (!webhook) {
-    throw new Error('DISCORD_WEBHOOK_URL is required (set it in dexter/.env)');
-  }
-  const response = await fetch(webhook, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      username: 'Weekly Discovery',
-      content,
-    }),
-  });
-  if (!response.ok) {
-    throw new Error(`Discord webhook failed: ${response.status} ${response.statusText}`);
-  }
-}
-
-function chunkMessage(prefix: string, body: string, maxChars = 1900): string[] {
-  const result: string[] = [];
-  const lines = body.split('\n');
-  let current = prefix;
-
-  for (const line of lines) {
-    if ((current + '\n' + line).length > maxChars) {
-      result.push(current);
-      current = line;
-    } else {
-      current = current ? `${current}\n${line}` : line;
-    }
-  }
-  if (current) result.push(current);
-  return result;
-}
 
 export function buildDiscordMessages(
   inputTickers: string[],
@@ -224,7 +150,7 @@ async function postDiscordBrief(
 ): Promise<void> {
   const messages = buildDiscordMessages(inputTickers, payload, fullReport, newlyDiscovered);
   for (const message of messages) {
-    await sendDiscordMessage(message);
+    await sendDiscordMessage(message, 'Weekly Discovery');
   }
 }
 
@@ -299,7 +225,10 @@ async function main(): Promise<void> {
   const watchlistAfter = await fetchActiveWatchlist();
   const newlyDiscovered = watchlistAfter.filter((r) => !beforeTickers.has(r.ticker));
 
-  const payload = extractJsonPayload(answer);
+  const payload = extractJsonPayload<WeeklyBriefPayload>(
+    answer,
+    (candidate) => Boolean(candidate.week_of) && Array.isArray(candidate.signals),
+  );
   await persistWeeklyBrief(payload, answer);
   await postDiscordBrief(tickers, payload, answer, newlyDiscovered);
 

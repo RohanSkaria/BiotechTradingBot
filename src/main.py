@@ -38,7 +38,7 @@ from src.db.storage import insert_trade
 from src.scout.weekly_poll import run_weekly_scout
 from src.scout.clinical_tracker import check_trial_status
 from src.scout.weekly_discovery import run_weekly_discovery
-from src.scout.dexter_bridge import run_dexter_weekly_brief
+from src.scout.dexter_bridge import run_dexter_weekly_brief, run_dexter_daily_pulse
 
 
 # --- Configuration ---
@@ -265,6 +265,24 @@ def scheduled_dexter_weekly_brief():
         send_system_alert("Dexter Weekly Brief Failed", str(e)[:500])
 
 
+def scheduled_dexter_daily_pulse():
+    """Wrapper for Dexter daily pulse run to handle exceptions."""
+    try:
+        print("\n" + "=" * 60)
+        print("⏰ SCHEDULED: Dexter Daily Pulse (Tue-Fri 6:30 AM EST)")
+        print("=" * 60)
+        result = run_dexter_daily_pulse(timeout_seconds=600)
+        if result.get("ok"):
+            print(f"  [DEXTER] Daily pulse completed for tickers: {', '.join(result.get('tickers', []))}")
+        else:
+            stderr = (result.get("stderr", "") or "")[:500]
+            print(f"  [ERROR] Dexter daily pulse failed: {stderr}")
+            send_system_alert("Dexter Daily Pulse Failed", stderr or "Unknown error")
+    except Exception as e:
+        print(f"  [ERROR] Dexter daily pulse crashed: {e}")
+        send_system_alert("Dexter Daily Pulse Failed", str(e)[:500])
+
+
 def run_bot():
     """Main entry point -- runs the bot with APScheduler."""
     print("=" * 60)
@@ -280,11 +298,13 @@ def run_bot():
         "Bot Started",
         f"Portfolio: ${portfolio:,.2f}\n"
         f"Dexter Weekly Brief: Monday 6:00 AM EST\n"
+        f"Dexter Daily Pulse: Tue-Fri 6:30 AM EST\n"
         f"Clinical Tracker: Every 6 hours"
     )
 
     print(f"Portfolio value: ${portfolio:,.2f}")
     print(f"Dexter Weekly Brief: Monday 6:00 AM EST")
+    print(f"Dexter Daily Pulse: Tue-Fri 6:30 AM EST")
     print(f"Clinical Tracker: Every 6 hours")
     print(f"Press Ctrl+C to stop.\n")
 
@@ -303,8 +323,21 @@ def run_bot():
         id='dexter_weekly_brief',
         name='Dexter Biotech Weekly Brief'
     )
-    
-    # Job 2: Clinical Tracker (every 6 hours)
+
+    # Job 2: Dexter Daily Pulse (Tue-Fri 6:30 AM EST)
+    scheduler.add_job(
+        scheduled_dexter_daily_pulse,
+        CronTrigger(
+            day_of_week='tue,wed,thu,fri',
+            hour=6,
+            minute=30,
+            timezone='America/New_York'
+        ),
+        id='dexter_daily_pulse',
+        name='Dexter Biotech Daily Pulse'
+    )
+
+    # Job 3: Clinical Tracker (every 6 hours)
     scheduler.add_job(
         scheduled_clinical_tracker,
         IntervalTrigger(hours=6),
