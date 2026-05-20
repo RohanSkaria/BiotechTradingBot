@@ -105,6 +105,9 @@ Apply this policy for the remainder of the run as soon as paid endpoints fail wi
       "catalysts": [
         { "date": "2026-05-20", "event": "Catalyst description" }
       ],
+      "risks": [
+        "One clear invalidation risk tied to timing/data/financing"
+      ],
       "high_conviction": true
     }
   ]
@@ -116,3 +119,4 @@ Apply this policy for the remainder of the run as soon as paid endpoints fail wi
 - No invented dates or unverified catalyst claims.
 - Keep thesis tight and decision-oriented.
 - Include at least one key risk or invalidation condition per ticker.
+- `signals[*].risks` should be a non-empty string array whenever possible.

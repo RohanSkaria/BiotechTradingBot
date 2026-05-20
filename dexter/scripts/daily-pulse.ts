@@ -7,6 +7,7 @@ import {
   extractJsonPayload,
   fetchActiveWatchlist,
   sendDiscordMessage,
+  withMention,
 } from './lib/brief-utils.js';
 
 config({ quiet: true });
@@ -26,9 +27,17 @@ type DailyPulseTicker = {
   note: string;
 };
 
+type PulseCatalyst = {
+  ticker: string;
+  event: string;
+  days_out?: number;
+};
+
 type DailyPulsePayload = {
   pulse_date: string;
   ref_week_of: string | null;
+  catalysts_today?: PulseCatalyst[];
+  catalysts_this_week?: PulseCatalyst[];
   tickers: DailyPulseTicker[];
   action_items: string[];
 };
@@ -84,6 +93,15 @@ function validateDailyPayload(
     if (!validStatuses.has(row.status)) return false;
     if (typeof row.change_pct !== 'number' || Number.isNaN(row.change_pct)) return false;
     seen.add(ticker);
+  }
+  const catalystArrays = [candidate.catalysts_today, candidate.catalysts_this_week];
+  for (const items of catalystArrays) {
+    if (items === undefined) continue;
+    if (!Array.isArray(items)) return false;
+    for (const item of items) {
+      if (!item || typeof item.ticker !== 'string' || typeof item.event !== 'string') return false;
+      if (item.days_out !== undefined && typeof item.days_out !== 'number') return false;
+    }
   }
   return seen.size === expected.size;
 }
@@ -197,16 +215,137 @@ function buildFallbackPayload(
   };
 }
 
-function buildDiscordMessages(
+const STATUS_PRIORITY: Record<DailyPulseTicker['status'], number> = {
+  catalyst_today: 4,
+  breakdown: 3,
+  accelerating: 2,
+  on_track: 1,
+  quiet: 0,
+};
+
+function formatChangePct(changePct: number): string {
+  return `${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%`;
+}
+
+function buildStatusBuckets(tickers: DailyPulseTicker[]): string[] {
+  const order: Array<DailyPulseTicker['status']> = [
+    'catalyst_today',
+    'accelerating',
+    'breakdown',
+    'on_track',
+    'quiet',
+  ];
+  const lines: string[] = [];
+  for (const status of order) {
+    const names = tickers
+      .filter((t) => t.status === status)
+      .map((t) => t.ticker.toUpperCase());
+    if (names.length > 0) {
+      lines.push(`- ${status}: ${names.join(', ')}`);
+    }
+  }
+  return lines;
+}
+
+function buildDeterministicMessage(
+  pulseDate: string,
+  payload: DailyPulsePayload,
+): string {
+  const catalystsToday = payload.catalysts_today || [];
+  const catalystsThisWeek = payload.catalysts_this_week || [];
+  const actionItems = payload.action_items || [];
+  const tickers = payload.tickers || [];
+  const allQuiet = tickers.length > 0 && tickers.every((t) => t.status === 'quiet');
+
+  if (catalystsToday.length === 0 && allQuiet && actionItems.length === 0) {
+    return [
+      `Biotech Daily Pulse | ${getPulseLabel(pulseDate)}`,
+      `All quiet vs Monday thesis. ${tickers.length} tickers monitored. No catalysts today.`,
+    ].join('\n');
+  }
+
+  const lines: string[] = [];
+  lines.push(`Biotech Daily Pulse | ${getPulseLabel(pulseDate)}`);
+  lines.push(
+    payload.ref_week_of
+      ? `Anchored to week of ${payload.ref_week_of} | ${tickers.length} tickers covered`
+      : `No reference week available | ${tickers.length} tickers covered`,
+  );
+  lines.push('');
+
+  const ranked = [...tickers]
+    .filter((t) => t.status !== 'quiet')
+    .sort(
+      (a, b) =>
+        STATUS_PRIORITY[b.status] - STATUS_PRIORITY[a.status] ||
+        Math.abs(b.change_pct) - Math.abs(a.change_pct),
+    );
+  if (ranked.length >= 2) {
+    lines.push('Top 3 to watch today');
+    for (const item of ranked.slice(0, 3)) {
+      lines.push(`- ${item.ticker} ${item.status} ${formatChangePct(item.change_pct)} - ${item.note}`);
+    }
+    lines.push('');
+  }
+
+  if (catalystsToday.length > 0) {
+    lines.push('Catalysts today');
+    for (const catalyst of catalystsToday) {
+      lines.push(`- ${catalyst.ticker} - ${catalyst.event}`);
+    }
+    lines.push('');
+  }
+
+  if (catalystsThisWeek.length > 0) {
+    lines.push('Catalysts this week');
+    for (const catalyst of catalystsThisWeek) {
+      const suffix =
+        typeof catalyst.days_out === 'number' ? ` (${catalyst.days_out} trading days)` : '';
+      lines.push(`- ${catalyst.ticker} - ${catalyst.event}${suffix}`);
+    }
+    lines.push('');
+  }
+
+  lines.push('Status');
+  lines.push(...buildStatusBuckets(tickers));
+  lines.push('');
+
+  lines.push('Notes');
+  const noteRows = ranked.length > 0 ? ranked.slice(0, 3) : tickers.slice(0, 3);
+  for (const item of noteRows) {
+    lines.push(`- ${item.ticker}: ${item.note}`);
+  }
+  lines.push('');
+
+  if (actionItems.length > 0) {
+    lines.push('Action');
+    for (const action of actionItems.slice(0, 3)) {
+      lines.push(`- ${action}`);
+    }
+  } else {
+    lines.push('Action');
+    lines.push('- Monitor catalysts and thesis drift into the open.');
+  }
+
+  return lines.join('\n').trim();
+}
+
+export function buildDiscordMessages(
   pulseDate: string,
   payload: DailyPulsePayload,
   fullReport: string,
 ): string[] {
-  const header = `Biotech Daily Pulse | ${getPulseLabel(pulseDate)}`;
-  const body = stripTrailingJsonBlock(fullReport);
-  const summary = body
-    ? `${header}\n\n${body}`
-    : `${header}\n\nNo narrative generated. See JSON payload for structured status.`;
+  const renderMode = (process.env.DAILY_PULSE_RENDER_MODE || '').trim().toLowerCase();
+  const summary =
+    renderMode === 'narrative'
+      ? (() => {
+          const header = `Biotech Daily Pulse | ${getPulseLabel(pulseDate)}`;
+          const body = stripTrailingJsonBlock(fullReport);
+          return body
+            ? `${header}\n\n${body}`
+            : `${header}\n\nNo narrative generated. See JSON payload for structured status.`;
+        })()
+      : buildDeterministicMessage(pulseDate, payload);
 
   const chunks = chunkMessage('', summary, 1900);
   return chunks.length > 0 ? chunks : [summary];
@@ -244,7 +383,11 @@ async function persistDailyPulse(
 }
 
 async function postDiscordPulse(messages: string[]): Promise<void> {
-  for (const message of messages) {
+  const prepared = [...messages];
+  if (prepared.length > 0) {
+    prepared[0] = withMention(prepared[0]);
+  }
+  for (const message of prepared) {
     await sendDiscordMessage(message, 'Daily Pulse');
   }
 }

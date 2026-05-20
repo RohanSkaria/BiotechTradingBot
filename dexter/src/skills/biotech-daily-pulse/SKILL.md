@@ -61,6 +61,12 @@ For each ticker in `tickers`, execute these steps:
 {
   "pulse_date": "YYYY-MM-DD",
   "ref_week_of": "YYYY-MM-DD or null",
+  "catalysts_today": [
+    { "ticker": "TVTX", "event": "PDUFA decision" }
+  ],
+  "catalysts_this_week": [
+    { "ticker": "VRTX", "event": "PDUFA decision", "days_out": 3 }
+  ],
   "tickers": [
     {
       "ticker": "VRTX",
@@ -80,3 +86,4 @@ For each ticker in `tickers`, execute these steps:
 - `tickers[*].status` must be one of: `on_track`, `accelerating`, `breakdown`, `catalyst_today`, `quiet`.
 - `change_pct` must be numeric.
 - Include every ticker from input universe exactly once.
+- `catalysts_today` and `catalysts_this_week` are optional but should be included when known.

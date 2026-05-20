@@ -7,6 +7,7 @@ import {
   extractJsonPayload,
   fetchActiveWatchlist,
   sendDiscordMessage,
+  withMention,
   type WatchlistRow,
 } from './lib/brief-utils.js';
 
@@ -18,6 +19,7 @@ type WeeklySignal = {
   conviction: number;
   thesis: string;
   catalysts: Array<{ date?: string; event?: string }>;
+  risks?: string[];
   high_conviction: boolean;
 };
 
@@ -52,8 +54,9 @@ export function buildDiscordMessages(
   fullReport: string,
   newlyDiscovered: WatchlistRow[],
 ): string[] {
-  const high = payload.signals.filter((s) => s.high_conviction);
-  const seen = new Set(payload.signals.map((s) => s.ticker.toUpperCase()));
+  const sortedSignals = [...payload.signals].sort((a, b) => b.conviction - a.conviction);
+  const high = sortedSignals.filter((s) => s.high_conviction);
+  const seen = new Set(sortedSignals.map((s) => s.ticker.toUpperCase()));
   const quiet = inputTickers.filter((t) => !seen.has(t.toUpperCase()));
 
   const newlyDiscoveredTickers = new Set(newlyDiscovered.map((r) => r.ticker.toUpperCase()));
@@ -69,6 +72,9 @@ export function buildDiscordMessages(
     ? `Scanned ${inputCount + discoveryCount} tickers (${inputCount} input + ${discoveryCount} newly discovered). ${high.length} high-conviction setup(s) this week.`
     : `Scanned ${inputCount} tickers. ${high.length} high-conviction setup(s) this week.`;
   summaryLines.push(scanLine);
+  if (high.length > 0) {
+    summaryLines.push(`Top pick: ${high[0].ticker} (${high[0].conviction}% conviction)`);
+  }
   summaryLines.push('');
 
   if (high.length === 0) {
@@ -121,7 +127,9 @@ export function buildDiscordMessages(
       signal.thesis,
       '',
       '**Key Risks**',
-      '- Thesis invalid if catalyst timing slips, data readout quality disappoints, or financing overhang increases.',
+      ...(signal.risks && signal.risks.length > 0
+        ? signal.risks.map((risk) => `- ${risk}`)
+        : ['- Thesis invalid if catalyst timing slips, data readout quality disappoints, or financing overhang increases.']),
     ].join('\n');
 
     const chunks = chunkMessage('', detail);
@@ -149,6 +157,9 @@ async function postDiscordBrief(
   newlyDiscovered: WatchlistRow[],
 ): Promise<void> {
   const messages = buildDiscordMessages(inputTickers, payload, fullReport, newlyDiscovered);
+  if (messages.length > 0) {
+    messages[0] = withMention(messages[0]);
+  }
   for (const message of messages) {
     await sendDiscordMessage(message, 'Weekly Discovery');
   }

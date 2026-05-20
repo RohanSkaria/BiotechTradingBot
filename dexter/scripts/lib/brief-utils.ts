@@ -50,6 +50,12 @@ export async function sendDiscordMessage(
   }
 }
 
+export function withMention(content: string): string {
+  const userId = (process.env.DISCORD_USER_ID || '').trim();
+  if (!userId) return content;
+  return `<@${userId}> ${content}`;
+}
+
 export function chunkMessage(prefix: string, body: string, maxChars = 1900): string[] {
   const result: string[] = [];
   const lines = body.split('\n');
