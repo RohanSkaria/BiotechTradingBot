@@ -118,10 +118,10 @@ At typical paper trading volume (10-20 classifications/day), you'll stay well wi
 
 The bot's architecture is informed by peer-reviewed research on biotech stock reactions:
 
-- **FinBERT accuracy**: Only ~67% on biotech press releases (barely better than coin flip)
-- **Asymmetric returns**: Negative news creates -13% abnormal returns vs. +6% for positive (2x magnitude)
-- **Information leakage**: 74% of abnormal returns occur BEFORE public announcement
-- **Cross-company effects**: Large-cap pharma NOT immune to competitive threats (e.g., LLY -7% on HIMS news)
+- **FinBERT is built for general corporate finance, not biotech.** Researchers have built entirely separate biomedical sentiment models (e.g., GAN-BioBERT) precisely because general financial language models miss the clinical and biochemical vocabulary required to parse trial endpoints and efficacy metrics. Source: [Validating GAN-BioBERT — Frontiers in Digital Health, 2022](https://www.frontiersin.org/journals/digital-health/articles/10.3389/fdgth.2022.878369/full).
+- **Asymmetric returns.** A PLOS ONE event study of large biopharma announcements found median announcement-day cumulative abnormal returns of **+0.8% on positive clinical events vs. -2.0% on negative events** — a ~2.5x downside asymmetry. Source: [Stock Market Returns and Clinical Trial Results — PLOS ONE](https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0071966).
+- **Pre-announcement run-up.** A PubMed-indexed oncology event study found companies reporting positive Phase III trials had stock prices **already up 13.7% on average in the 120 trading days before the public announcement** (vs. -0.7% for companies reporting negative trials, p = 0.09; the 60-day post-hoc window of +9.4% vs. -4.5% was significant at p = 0.03). Most of the alpha is captured by institutional capital before EDGAR ever fires. Source: [Rothenstein et al., 2011 — PubMed 21949081](https://pubmed.ncbi.nlm.nih.gov/21949081/).
+- **Cross-company effects.** Large-cap pharma is not immune to competitive threats (e.g., LLY -7% on HIMS compounded-Wegovy news, Feb 2026). Observational, not peer-reviewed.
 
 ## Disclaimer
 

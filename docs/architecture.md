@@ -63,7 +63,7 @@ flowchart TD
 - Dedup: SHA-256 hash of headline, skip if already classified
 - Token limits: Max 300 output tokens per call
 
-**Why Gemini Over FinBERT**: Research shows FinBERT achieves only ~67% accuracy on biotech press releases. Gemini Flash costs ~$0.0005 per call and significantly outperforms FinBERT on domain-specific language.
+**Why Gemini Over FinBERT**: FinBERT is built for general corporate finance text — earnings calls, 10-Ks — and lacks the medical and biochemical vocabulary needed to parse clinical trial endpoints. Researchers have built separate biomedical sentiment models (e.g., GAN-BioBERT — see [Frontiers in Digital Health, 2022](https://www.frontiersin.org/journals/digital-health/articles/10.3389/fdgth.2022.878369/full)) precisely because the general financial models underperform on trial language. Gemini Flash costs ~$0.0005 per call and is significantly stronger on domain-specific text.
 
 ### Tier 3: Trade Decision Engine
 
@@ -206,10 +206,10 @@ At paper trading volume, you'll stay in free tier.
 
 The architecture is informed by peer-reviewed research:
 
-1. **FinBERT Accuracy**: Only ~67% on biotech press releases → skip FinBERT, use Gemini
-2. **Asymmetric Returns**: Negative news creates -13% vs. +6% for positive → negative bias in keyword scoring
-3. **Information Leakage**: 74% of returns occur before announcement → focus on speed (EDGAR is fastest public source)
-4. **Cross-Company Effects**: Large-cap not immune → LLM must identify competitors
+1. **FinBERT does not handle biotech text well.** General financial sentiment models miss clinical and biochemical vocabulary, which is why biomedical-specific models like GAN-BioBERT were built. → Skip FinBERT, use Gemini Flash. Source: [Validating GAN-BioBERT — Frontiers in Digital Health, 2022](https://www.frontiersin.org/journals/digital-health/articles/10.3389/fdgth.2022.878369/full).
+2. **Asymmetric returns.** Median announcement-day abnormal returns: +0.8% on positive events vs. -2.0% on negative (~2.5x downside). → Negative bias in keyword scoring. Source: [Stock Market Returns and Clinical Trial Results — PLOS ONE](https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0071966).
+3. **Pre-announcement run-up.** Companies reporting positive Phase III oncology trials were already up 13.7% on average in the 120 trading days before public announcement. → Focus on speed (EDGAR is the fastest public source), but accept that most alpha is captured before the public filing. Source: [Rothenstein et al., 2011 — PubMed 21949081](https://pubmed.ncbi.nlm.nih.gov/21949081/).
+4. **Cross-company effects.** Large-cap pharma not immune to competitive shocks (e.g., LLY -7% on HIMS news, Feb 2026). → LLM must identify competitors in the same therapeutic area. Observational.
 
 ## Scalability Considerations
 

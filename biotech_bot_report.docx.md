@@ -23,6 +23,14 @@ The system is designed for learning and experimentation. It is **not** intended 
 | Key Research Findings That Shape This Architecture • FinBERT predicts biotech news sentiment with only \~67% accuracy (barely better than coin flip) • Early-stage biotech companies show dramatically larger stock moves than big pharma on news • Negative news creates \-13% abnormal returns vs only \+6% for positive news (asymmetric) • 74% of cumulative abnormal returns occur BEFORE the public announcement (information leakage) • Large-cap pharma is NOT immune to competitive/pricing threats (e.g., LLY \-7% on HIMS news, Feb 2026\) |
 | :---- |
 
+> **Editor's note (added May 2026):** The four bulleted statistics above came from the LLM that drafted this report and were not traced back to primary sources at the time of writing. On subsequent verification, the qualitative direction of every claim is supported by peer-reviewed research, but the specific percentages are not. The actual peer-reviewed numbers are:
+>
+> - FinBERT specifically achieves ~67% on biotech press releases — **no source found**. The defensible statement is that general financial sentiment models underperform on biomedical text, which is why domain-specific models like GAN-BioBERT exist ([Frontiers in Digital Health, 2022](https://www.frontiersin.org/journals/digital-health/articles/10.3389/fdgth.2022.878369/full)).
+> - Asymmetric returns of -13% / +6% — actual published numbers are **+0.8% positive vs. -2.0% negative** median announcement-day abnormal returns, a ~2.5x asymmetry ([PLOS ONE](https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0071966)).
+> - "74% of cumulative abnormal returns before announcement" — **no source found**. A real pre-announcement figure is the **13.7% mean run-up** in the 120 trading days before positive Phase III oncology announcements (Rothenstein et al., 2011, [PubMed 21949081](https://pubmed.ncbi.nlm.nih.gov/21949081/)).
+>
+> Updated numbers and citations now live in `docs/README.md` and `docs/architecture.md`. This file is preserved as the original report.
+
 # **1\. System Architecture**
 
 The system follows a three-tier pipeline designed to balance cost efficiency with analytical accuracy. Each tier filters and enriches the signal before passing it to the next.
