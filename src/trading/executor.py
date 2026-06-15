@@ -45,6 +45,32 @@ def get_portfolio_value() -> float:
     return 0.0
 
 
+def get_clock() -> Optional[dict]:
+    """
+    Get the Alpaca market clock.
+
+    Returns a dict like {"is_open": bool, "next_open": str, "next_close": str},
+    or None if the request fails.
+    """
+    try:
+        resp = requests.get(f"{ALPACA_BASE_URL}/v2/clock", headers=HEADERS, timeout=10)
+        if resp.status_code == 200:
+            return resp.json()
+        print(f"  [ALPACA] Clock error: {resp.status_code} {resp.text[:200]}")
+        return None
+    except Exception as e:
+        print(f"  [ALPACA] Clock exception: {e}")
+        return None
+
+
+def is_market_open() -> Optional[bool]:
+    """Convenience wrapper: True/False if the market is open, None if unknown."""
+    clock = get_clock()
+    if clock is None:
+        return None
+    return bool(clock.get("is_open"))
+
+
 def get_position(ticker: str) -> Optional[dict]:
     """Get current position for a ticker, or None if no position."""
     try:
@@ -68,6 +94,40 @@ def get_all_positions() -> list:
         return []
     except Exception:
         return []
+
+
+def get_order(order_id: str) -> Optional[dict]:
+    """Fetch a single order by ID (used to reconcile actual fills)."""
+    try:
+        resp = requests.get(
+            f"{ALPACA_BASE_URL}/v2/orders/{order_id}",
+            headers=HEADERS, timeout=10
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        return None
+    except Exception:
+        return None
+
+
+def wait_for_fill(order_id: str, timeout_seconds: float = 4.0, poll_interval: float = 0.5) -> Optional[dict]:
+    """
+    Poll an order until it reaches a terminal state (filled / canceled /
+    rejected / expired) or the timeout elapses. IOC orders usually settle in
+    well under a second, but the initial POST response is 'pending_new'.
+
+    Returns the latest order dict (which may still be non-terminal on timeout).
+    """
+    import time as _time
+    terminal = {"filled", "canceled", "cancelled", "rejected", "expired", "done_for_day"}
+    order = None
+    deadline = _time.time() + timeout_seconds
+    while _time.time() < deadline:
+        order = get_order(order_id)
+        if order and str(order.get("status", "")).lower() in terminal:
+            return order
+        _time.sleep(poll_interval)
+    return order
 
 
 def get_latest_price(ticker: str) -> Optional[float]:

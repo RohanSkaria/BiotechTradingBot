@@ -136,6 +136,11 @@ def init_db(db_path: str = None) -> None:
             slippage_price_at_signal REAL,
             slippage_price_after_30s REAL,
             pnl REAL,
+            catalyst_date TEXT,
+            decision_model TEXT,
+            hold_through INTEGER DEFAULT 0,
+            exit_reason TEXT,
+            closed_at TEXT,
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (news_id) REFERENCES news_events(id),
             FOREIGN KEY (classified_id) REFERENCES classified_events(id)

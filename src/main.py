@@ -24,6 +24,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from src.db.schema import init_db
+from src.db.migrate_phase2 import migrate as migrate_phase2
 from src.db.storage import get_daily_llm_calls
 from src.data.edgar_8k import poll_all_tickers
 from src.analysis.keyword_filter import filter_headline, should_classify
@@ -33,6 +34,9 @@ from src.trading.risk_manager import (
     calculate_position_size, get_trade_side, should_stop_trading,
 )
 from src.trading.slippage_log import log_slippage_async
+from src.trading.brief_trader import trade_from_brief
+from src.trading.position_manager import manage_positions
+from src.config.strategy import load_strategy
 from src.alerts.discord import send_trade_alert, send_system_alert, send_daily_summary
 from src.db.storage import insert_trade
 from src.scout.weekly_poll import run_weekly_scout
@@ -247,6 +251,31 @@ def scheduled_clinical_tracker():
         send_system_alert("Clinical Tracker Failed", str(e)[:500])
 
 
+def scheduled_brief_trade():
+    """
+    Weekday entry check: act on brief signals within catalyst entry window.
+    Free Gemini decider gates each order; Claude brief is research-only.
+    """
+    try:
+        print("\n" + "=" * 60)
+        print("⏰ SCHEDULED: Brief Trade Entry (Mon-Fri 9:35 AM EST)")
+        print("=" * 60)
+        trade_from_brief(high_conviction_only=True, send_discord=True)
+    except Exception as e:
+        print(f"  [ERROR] Brief trade failed: {e}")
+        send_system_alert("Brief Trade Failed", str(e)[:500])
+
+
+def scheduled_position_manager():
+    """Monitor open positions for stop/take-profit/pre-catalyst exits."""
+    try:
+        strategy = load_strategy()
+        manage_positions(dry_run=False, send_discord=True)
+    except Exception as e:
+        print(f"  [ERROR] Position manager failed: {e}")
+        send_system_alert("Position Manager Failed", str(e)[:500])
+
+
 def scheduled_dexter_weekly_brief():
     """Wrapper for Dexter weekly brief run to handle exceptions."""
     try:
@@ -289,22 +318,33 @@ def run_bot():
     print("BIOTECH TRADING BOT -- Starting")
     print("=" * 60)
 
-    # Initialize database
+    # Initialize database + Phase 2 schema
     init_db()
+    try:
+        migrate_phase2()
+    except Exception as e:
+        print(f"  [MIGRATE] Phase 2 migration note: {e}")
+
+    strategy = load_strategy()
+    pm_interval = strategy.get("position_manager_interval_min", 5)
 
     # Send startup notification
     portfolio = get_portfolio_value()
     send_system_alert(
         "Bot Started",
         f"Portfolio: ${portfolio:,.2f}\n"
-        f"Dexter Weekly Brief: Monday 6:00 AM EST\n"
+        f"Dexter Weekly Brief: Monday 6:00 AM EST (Claude research)\n"
         f"Dexter Daily Pulse: Tue-Fri 6:30 AM EST\n"
+        f"Brief Trade Entry: Mon-Fri 9:35 AM EST (free Gemini decider)\n"
+        f"Position Manager: every {pm_interval} min (market hours)\n"
         f"Clinical Tracker: Every 6 hours"
     )
 
     print(f"Portfolio value: ${portfolio:,.2f}")
-    print(f"Dexter Weekly Brief: Monday 6:00 AM EST")
+    print(f"Dexter Weekly Brief: Monday 6:00 AM EST (Claude research)")
     print(f"Dexter Daily Pulse: Tue-Fri 6:30 AM EST")
+    print(f"Brief Trade Entry: Mon-Fri 9:35 AM EST (free Gemini decider)")
+    print(f"Position Manager: every {pm_interval} min")
     print(f"Clinical Tracker: Every 6 hours")
     print(f"Press Ctrl+C to stop.\n")
 
@@ -344,7 +384,28 @@ def run_bot():
         id='clinical_tracker',
         name='Clinical Trial Status Tracker'
     )
-    
+
+    # Job 4: Brief Trade Entry (Mon-Fri 9:35 AM EST)
+    scheduler.add_job(
+        scheduled_brief_trade,
+        CronTrigger(
+            day_of_week='mon,tue,wed,thu,fri',
+            hour=9,
+            minute=35,
+            timezone='America/New_York'
+        ),
+        id='brief_trade',
+        name='Brief Trade Entry (free-model gate)'
+    )
+
+    # Job 5: Position Manager (every N minutes — exits on stop/TP/pre-catalyst)
+    scheduler.add_job(
+        scheduled_position_manager,
+        IntervalTrigger(minutes=pm_interval),
+        id='position_manager',
+        name='Position Manager'
+    )
+
     scheduler.start()
     print("  [SCHEDULER] Jobs scheduled:")
     for job in scheduler.get_jobs():
@@ -386,6 +447,25 @@ def run_clinical_now():
     check_trial_status()
 
 
+def run_brief_trade_now(dry_run: bool = False, aggressive: bool = False, top_n: int = None):
+    """Execute (or preview) the latest weekly brief on Alpaca immediately."""
+    init_db()
+    migrate_phase2()
+    trade_from_brief(
+        high_conviction_only=True,
+        top_n=top_n,
+        aggressive=aggressive,
+        dry_run=dry_run,
+        send_discord=True,
+    )
+
+
+def run_position_manager_now(dry_run: bool = False):
+    init_db()
+    migrate_phase2()
+    manage_positions(dry_run=dry_run, send_discord=True)
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Biotech Trading Bot")
@@ -393,6 +473,18 @@ if __name__ == "__main__":
     parser.add_argument("--scout", action="store_true", help="Run weekly scout immediately and exit")
     parser.add_argument("--discovery", action="store_true", help="Run weekly discovery immediately and exit")
     parser.add_argument("--clinical", action="store_true", help="Run clinical tracker immediately and exit")
+    parser.add_argument("--brief-trade", action="store_true",
+                        help="Execute the latest weekly brief on Alpaca now and exit")
+    parser.add_argument("--brief-dry-run", action="store_true",
+                        help="Preview the latest weekly brief trades without ordering")
+    parser.add_argument("--aggressive", action="store_true",
+                        help="With --brief-trade: full 5%% size on high-conviction names")
+    parser.add_argument("--top", type=int, default=None,
+                        help="With --brief-trade: only the top N signals by conviction")
+    parser.add_argument("--positions", action="store_true",
+                        help="Run position manager once and exit")
+    parser.add_argument("--positions-dry-run", action="store_true",
+                        help="Preview position exits without closing")
     parser.add_argument("--interval", type=int, default=60, help="Poll interval in seconds")
     parser.add_argument("--lookback", type=int, default=1, help="EDGAR lookback in days")
     args = parser.parse_args()
@@ -408,5 +500,9 @@ if __name__ == "__main__":
         run_discovery_now()
     elif args.clinical:
         run_clinical_now()
+    elif args.brief_trade or args.brief_dry_run:
+        run_brief_trade_now(dry_run=args.brief_dry_run, aggressive=args.aggressive, top_n=args.top)
+    elif args.positions or args.positions_dry_run:
+        run_position_manager_now(dry_run=args.positions_dry_run)
     else:
         run_bot()

@@ -1,0 +1,21 @@
+# Algorithmic biotech catalyst trading guardrails
+# Research (Claude weekly brief) is separate from execution (free Gemini decider).
+
+max_position_pct: 0.05          # Max 5% of portfolio per trade
+max_total_exposure_pct: 0.25      # Max 25% of portfolio across all open positions
+max_open_positions: 5
+max_daily_loss_pct: 0.02          # Stop trading if unrealized loss exceeds 2%
+
+entry_window_days: 10             # Enter only when catalyst is within N calendar days
+pre_catalyst_exit_days: 1         # Exit N days before catalyst (unless hold_through)
+default_hold_through_catalyst: false
+
+trade_decider_model: gemini-2.0-flash
+position_manager_interval_min: 5
+
+# Size tiers returned by the free-model trade decider
+size_tier_multipliers:
+  full: 1.0
+  half: 0.5
+  quarter: 0.25
+  none: 0.0

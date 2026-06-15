@@ -16,12 +16,13 @@ import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.trading.executor import get_portfolio_value, get_position, get_all_positions
+from src.config.strategy import load_strategy
 
-# --- Risk Parameters ---
-MAX_POSITION_PCT = 0.05       # Max 5% of portfolio per trade
-MAX_DAILY_LOSS_PCT = 0.02     # Stop trading if daily loss exceeds 2%
-DEFAULT_TAKE_PROFIT_PCT = 0.10  # 10% take profit (2:1 reward for 5% risk)
-MAX_OPEN_POSITIONS = 5        # Max concurrent positions
+_strategy = load_strategy()
+MAX_POSITION_PCT = _strategy.get("max_position_pct", 0.05)
+MAX_DAILY_LOSS_PCT = _strategy.get("max_daily_loss_pct", 0.02)
+MAX_OPEN_POSITIONS = _strategy.get("max_open_positions", 5)
+MAX_TOTAL_EXPOSURE_PCT = _strategy.get("max_total_exposure_pct", 0.25)
 
 # Dynamic stop-loss by market cap tier + volatility
 # Key format: "{market_cap_tier}_{volatility}"
@@ -54,6 +55,28 @@ def load_watchlist() -> dict:
         return {}
 
 
+def _get_ticker_info_from_db(ticker: str) -> dict:
+    """
+    Look up ticker metadata in the weekly_watchlist DB table.
+
+    Tickers discovered by the Dexter brief (e.g. VRDN, ARQT, IONS) are not in
+    config/watchlist.yaml, so without this fallback they'd always get generic
+    mid/medium defaults and the wrong stop-loss tier.
+    """
+    try:
+        from src.db.storage import get_watchlist_from_db
+        for row in get_watchlist_from_db():
+            if str(row.get("ticker", "")).strip().upper() == ticker.upper():
+                return {
+                    "market_cap_tier": (row.get("market_cap_tier") or "mid").strip(),
+                    "volatility": (row.get("volatility") or "medium").strip(),
+                    "focus": (row.get("focus") or row.get("expected_catalyst") or ""),
+                }
+    except Exception:
+        pass
+    return {}
+
+
 def get_ticker_info(ticker: str) -> dict:
     """Get market cap tier and volatility info for a ticker from watchlist."""
     watchlist = load_watchlist()
@@ -70,13 +93,19 @@ def get_ticker_info(ticker: str) -> dict:
     
     # Old format: tickers dict
     elif "tickers" in watchlist:
-        info = watchlist.get("tickers", {}).get(ticker, {})
-        return {
-            "market_cap_tier": info.get("market_cap_tier", "mid"),
-            "volatility": info.get("volatility", "medium"),
-            "focus": info.get("focus", info.get("key_catalyst", "")),
-        }
+        if ticker in watchlist.get("tickers", {}):
+            info = watchlist["tickers"][ticker]
+            return {
+                "market_cap_tier": info.get("market_cap_tier", "mid"),
+                "volatility": info.get("volatility", "medium"),
+                "focus": info.get("focus", info.get("key_catalyst", "")),
+            }
     
+    # Fallback: tickers discovered via the Dexter brief live only in the DB
+    db_info = _get_ticker_info_from_db(ticker)
+    if db_info:
+        return db_info
+
     return {"market_cap_tier": "mid", "volatility": "medium", "focus": ""}
 
 
@@ -104,11 +133,20 @@ def get_take_profit_pct(stop_loss_pct: float) -> float:
     return stop_loss_pct * TAKE_PROFIT_MULTIPLIER
 
 
+def _total_exposure_pct(portfolio_value: float, positions: list) -> float:
+    if portfolio_value <= 0:
+        return 0.0
+    exposure = sum(abs(float(p.get("market_value", 0))) for p in positions)
+    return exposure / portfolio_value
+
+
 def calculate_position_size(
     ticker: str,
     price: float,
     sentiment: str = "Neutral",
     confidence: int = 50,
+    size_tier_multiplier: float = 1.0,
+    side: str = "buy",
 ) -> dict:
     """
     Calculate the position size for a trade based on risk parameters.
@@ -135,6 +173,12 @@ def calculate_position_size(
         return {"qty": 0, "dollar_amount": 0, "allowed": False,
                 "reason": f"Max open positions reached ({MAX_OPEN_POSITIONS})"}
 
+    # Total portfolio exposure guardrail
+    exposure_pct = _total_exposure_pct(portfolio_value, positions)
+    if exposure_pct >= MAX_TOTAL_EXPOSURE_PCT:
+        return {"qty": 0, "dollar_amount": 0, "allowed": False,
+                "reason": f"Max total exposure reached ({exposure_pct*100:.1f}% >= {MAX_TOTAL_EXPOSURE_PCT*100:.0f}%)"}
+
     # Check if we already have a position in this ticker
     existing = get_position(ticker)
     if existing:
@@ -160,6 +204,8 @@ def calculate_position_size(
     else:
         pct *= 0.3  # minimal for neutral
 
+    pct *= max(0.0, min(1.0, size_tier_multiplier))
+
     dollar_amount = portfolio_value * pct
     qty = int(dollar_amount / price)  # whole shares only for simplicity
 
@@ -173,15 +219,22 @@ def calculate_position_size(
     
     ticker_info = get_ticker_info(ticker)
 
+    if side == "sell":
+        stop_loss_price = round(price * (1 + stop_loss_pct), 2)
+        take_profit_price = round(price * (1 - take_profit_pct), 2)
+    else:
+        stop_loss_price = round(price * (1 - stop_loss_pct), 2)
+        take_profit_price = round(price * (1 + take_profit_pct), 2)
+
     return {
         "qty": qty,
         "dollar_amount": round(qty * price, 2),
         "allowed": True,
         "reason": f"OK: {pct*100:.1f}% of ${portfolio_value:,.0f} portfolio",
         "stop_loss_pct": stop_loss_pct,
-        "stop_loss_price": round(price * (1 - stop_loss_pct), 2),
+        "stop_loss_price": stop_loss_price,
         "take_profit_pct": take_profit_pct,
-        "take_profit_price": round(price * (1 + take_profit_pct), 2),
+        "take_profit_price": take_profit_price,
         "market_cap_tier": ticker_info.get("market_cap_tier", "unknown"),
         "volatility": ticker_info.get("volatility", "unknown"),
     }

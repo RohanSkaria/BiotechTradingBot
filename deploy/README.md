@@ -104,7 +104,17 @@ sudo systemctl restart biotech-bot
 | Job | Cadence |
 |---|---|
 | Clinical Tracker | Every 6 hours (interval) |
-| Dexter Weekly Brief | Monday 6:00 AM America/New_York |
+| Dexter Weekly Brief | Monday 6:00 AM America/New_York (Claude — research only) |
 | Dexter Daily Pulse | Tue-Fri 6:30 AM America/New_York |
+| Brief Trade Entry | Mon-Fri 9:35 AM America/New_York (free Gemini decider) |
+| Position Manager | Every 5 minutes (stop / take-profit / pre-catalyst exits) |
 
 All managed by APScheduler in [`src/main.py`](../src/main.py).
+
+After deploy, run the Phase 2 migration once:
+
+```bash
+source venv/bin/activate
+python -m src.db.migrate_phase2
+sudo systemctl restart biotech-bot
+```

@@ -5,6 +5,7 @@ Supports both PostgreSQL (Neon) and SQLite (local fallback).
 
 import hashlib
 import json
+import re
 from datetime import datetime, date, timezone
 from typing import Optional
 
@@ -254,6 +255,9 @@ def insert_trade(
     stop_loss: float = None,
     take_profit: float = None,
     slippage_price_at_signal: float = None,
+    catalyst_date: str = None,
+    decision_model: str = None,
+    hold_through: bool = False,
     db_path: str = None,
 ) -> int:
     """Insert a trade record. Returns the row ID."""
@@ -265,11 +269,13 @@ def insert_trade(
         cur.execute(
             f"""INSERT INTO trades
                (news_id, classified_id, ticker, side, qty, price, order_id,
-                stop_loss, take_profit, slippage_price_at_signal)
-               VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                stop_loss, take_profit, slippage_price_at_signal,
+                catalyst_date, decision_model, hold_through)
+               VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
                RETURNING id""",
             (news_id, classified_id, ticker, side, qty, price, order_id,
-             stop_loss, take_profit, slippage_price_at_signal)
+             stop_loss, take_profit, slippage_price_at_signal,
+             catalyst_date, decision_model, hold_through)
         )
         result = cur.fetchone()
         row_id = result['id']
@@ -277,16 +283,64 @@ def insert_trade(
         cursor = conn.execute(
             """INSERT INTO trades
                (news_id, classified_id, ticker, side, qty, price, order_id,
-                stop_loss, take_profit, slippage_price_at_signal)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                stop_loss, take_profit, slippage_price_at_signal,
+                catalyst_date, decision_model, hold_through)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (news_id, classified_id, ticker, side, qty, price, order_id,
-             stop_loss, take_profit, slippage_price_at_signal)
+             stop_loss, take_profit, slippage_price_at_signal,
+             catalyst_date, decision_model, 1 if hold_through else 0)
         )
         row_id = cursor.lastrowid
     
     conn.commit()
     conn.close()
     return row_id
+
+
+def update_trade_fill(
+    trade_id: int,
+    status: str = None,
+    filled_qty: float = None,
+    filled_avg_price: float = None,
+    db_path: str = None,
+) -> None:
+    """
+    Reconcile a logged trade with its actual Alpaca fill.
+
+    Orders are inserted at submit time with the intended qty and signal price,
+    but IOC orders frequently fill partially (or not at all). This updates the
+    journal row so qty/price/status reflect what really happened.
+    """
+    sets = []
+    params = []
+    ph = _placeholder()
+
+    if status is not None:
+        sets.append(f"status = {ph}")
+        params.append(status)
+    if filled_qty is not None:
+        sets.append(f"qty = {ph}")
+        params.append(filled_qty)
+    if filled_avg_price is not None:
+        sets.append(f"price = {ph}")
+        params.append(filled_avg_price)
+
+    if not sets:
+        return
+
+    params.append(trade_id)
+    query = f"UPDATE trades SET {', '.join(sets)} WHERE id = {ph}"
+
+    conn = get_connection(db_path)
+    try:
+        if is_postgres():
+            cur = conn.cursor()
+            cur.execute(query, tuple(params))
+        else:
+            conn.execute(query, tuple(params))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def get_recent_news(limit: int = 20, ticker: str = None, db_path: str = None) -> list:
@@ -334,3 +388,114 @@ def get_watchlist_from_db(db_path: str = None) -> list:
     rows = cur.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def get_latest_brief_signals(actionable_only: bool = False, db_path: str = None) -> list:
+    """
+    Get every signal from the most recent Dexter weekly brief.
+
+    The weekly_briefings table lives in Neon Postgres (written by
+    dexter/scripts/weekly-brief.ts). Each row carries a directional call
+    (long/short/skip), a 0-100 conviction score, a thesis, catalysts (jsonb),
+    and a high_conviction flag.
+
+    Args:
+        actionable_only: if True, drop "skip" signals and keep only long/short.
+
+    Returns:
+        List of dicts ordered by conviction (highest first). Empty list if not
+        on Postgres or no briefs exist.
+    """
+    if not is_postgres():
+        return []
+
+    conn = get_connection(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT week_of, ticker, direction, conviction, thesis, catalysts, high_conviction
+        FROM weekly_briefings
+        WHERE week_of = (SELECT MAX(week_of) FROM weekly_briefings)
+        ORDER BY conviction DESC, ticker ASC
+        """
+    )
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    if actionable_only:
+        rows = [r for r in rows if str(r.get("direction") or "").lower() in ("long", "short")]
+
+    return rows
+
+
+def get_watchlist_row(ticker: str, db_path: str = None) -> Optional[dict]:
+    """Get a single active watchlist row by ticker."""
+    for row in get_watchlist_from_db(db_path):
+        if str(row.get("ticker", "")).upper() == ticker.upper():
+            return row
+    return None
+
+
+def get_open_trades(db_path: str = None) -> list:
+    """
+    Trades that represent open positions (filled/partial, not yet closed).
+    """
+    conn = get_connection(db_path)
+    if is_postgres():
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT * FROM trades
+            WHERE closed_at IS NULL
+              AND status IN ('filled', 'partially_filled', 'canceled')
+              AND qty > 0
+            ORDER BY created_at DESC
+            """
+        )
+        rows = [dict(r) for r in cur.fetchall()]
+    else:
+        rows = [
+            dict(r) for r in conn.execute(
+                """
+                SELECT * FROM trades
+                WHERE closed_at IS NULL
+                  AND status IN ('filled', 'partially_filled', 'canceled')
+                  AND qty > 0
+                ORDER BY created_at DESC
+                """
+            ).fetchall()
+        ]
+    conn.close()
+    return rows
+
+
+def get_latest_open_trade(ticker: str, db_path: str = None) -> Optional[dict]:
+    """Most recent open trade journal row for a ticker."""
+    open_trades = [t for t in get_open_trades(db_path) if t.get("ticker") == ticker.upper()]
+    return open_trades[0] if open_trades else None
+
+
+def close_trade_record(
+    trade_id: int,
+    exit_reason: str,
+    pnl: float = None,
+    status: str = "closed",
+    db_path: str = None,
+) -> None:
+    """Mark a trade as closed in the journal."""
+    conn = get_connection(db_path)
+    ph = _placeholder()
+    now = datetime.now(timezone.utc).isoformat()
+    params = (status, exit_reason, now, pnl, trade_id)
+    query = f"""
+        UPDATE trades
+        SET status = {ph}, exit_reason = {ph}, closed_at = {ph}, pnl = {ph}
+        WHERE id = {ph}
+    """
+    if is_postgres():
+        cur = conn.cursor()
+        cur.execute(query, params)
+    else:
+        conn.execute(query, params)
+    conn.commit()
+    conn.close()

@@ -191,3 +191,27 @@ def send_filing_alert(
     content += f"\n`{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}`"
     
     return send_message(content)
+
+
+def send_exit_alert(
+    ticker: str,
+    side: str,
+    qty: int,
+    entry_price: float,
+    exit_price: float,
+    pnl: float,
+    reason: str,
+) -> bool:
+    """Send alert when a position is closed by the position manager."""
+    direction = "LONG" if side in ("buy", "long") else "SHORT"
+    pnl_str = f"+${pnl:.2f}" if pnl >= 0 else f"-${abs(pnl):.2f}"
+    emoji = "\U0001f4e4"
+
+    content = (
+        f"{emoji} **EXIT {direction} ${ticker}** | {qty} shares\n"
+        f"> Entry: ${entry_price:.2f} -> Exit: ${exit_price:.2f}\n"
+        f"> P&L: {pnl_str}\n"
+        f"> Reason: {reason}\n"
+        f"\n`{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}`"
+    )
+    return send_message(content)
