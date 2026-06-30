@@ -18,6 +18,12 @@ DEFAULTS = {
     "entry_window_days": 10,
     "pre_catalyst_exit_days": 1,
     "default_hold_through_catalyst": False,
+    # Exits
+    "use_stop_loss": True,
+    "use_take_profit": False,
+    "trailing_stop_enabled": True,
+    "trailing_stop_pct": 0.12,
+    "post_catalyst_exit_days": None,
     "trade_decider_model": "gemini-2.0-flash",
     "position_manager_interval_min": 5,
     # Scale-to-target rebalancing

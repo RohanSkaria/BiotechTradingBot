@@ -141,6 +141,7 @@ def init_db(db_path: str = None) -> None:
             hold_through INTEGER DEFAULT 0,
             exit_reason TEXT,
             closed_at TEXT,
+            high_water_price REAL,
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY (news_id) REFERENCES news_events(id),
             FOREIGN KEY (classified_id) REFERENCES classified_events(id)

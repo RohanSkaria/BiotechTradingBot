@@ -18,6 +18,8 @@ NEW_COLUMNS = [
     ("hold_through", "BOOLEAN DEFAULT FALSE"),
     ("exit_reason", "TEXT"),
     ("closed_at", "TIMESTAMP"),
+    # High-water mark for trailing-stop tracking (updated by the position manager)
+    ("high_water_price", "DOUBLE PRECISION"),
 ]
 
 
@@ -40,9 +42,14 @@ def migrate(db_path: str = None) -> None:
             for col, col_type in NEW_COLUMNS:
                 if col not in existing:
                     # SQLite: simplified types
-                    sqlite_type = "TEXT" if "DATE" in col_type or "TIMESTAMP" in col_type else (
-                        "INTEGER" if "BOOLEAN" in col_type else "TEXT"
-                    )
+                    if "DOUBLE" in col_type or "REAL" in col_type or "PRECISION" in col_type:
+                        sqlite_type = "REAL"
+                    elif "DATE" in col_type or "TIMESTAMP" in col_type:
+                        sqlite_type = "TEXT"
+                    elif "BOOLEAN" in col_type:
+                        sqlite_type = "INTEGER"
+                    else:
+                        sqlite_type = "TEXT"
                     conn.execute(f"ALTER TABLE trades ADD COLUMN {col} {sqlite_type}")
             conn.commit()
             print("✓ Phase 2 migration applied (SQLite)")

@@ -475,6 +475,25 @@ def get_latest_open_trade(ticker: str, db_path: str = None) -> Optional[dict]:
     return open_trades[0] if open_trades else None
 
 
+def update_high_water(trade_id: int, price: float, db_path: str = None) -> None:
+    """Raise the stored high-water price for a trade (used for trailing stops)."""
+    conn = get_connection(db_path)
+    ph = _placeholder()
+    query = (
+        f"UPDATE trades SET high_water_price = {ph} "
+        f"WHERE id = {ph} AND (high_water_price IS NULL OR high_water_price < {ph})"
+    )
+    try:
+        if is_postgres():
+            cur = conn.cursor()
+            cur.execute(query, (price, trade_id, price))
+        else:
+            conn.execute(query, (price, trade_id, price))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def close_trade_record(
     trade_id: int,
     exit_reason: str,

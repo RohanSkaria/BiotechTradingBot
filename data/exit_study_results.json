@@ -1,0 +1,529 @@
+{
+  "benchmark": "XBI",
+  "events_measured": 18,
+  "min_n": 5,
+  "overall": {
+    "gap": {
+      "n": 18,
+      "mean": 0.19,
+      "median": 0.56,
+      "min": -11.95,
+      "max": 8.14
+    },
+    "1d": {
+      "n": 18,
+      "mean": -0.67,
+      "median": -0.45,
+      "min": -7.51,
+      "max": 3.09
+    },
+    "3d": {
+      "n": 14,
+      "mean": -2.15,
+      "median": -1.85,
+      "min": -7.59,
+      "max": 0.91
+    },
+    "5d": {
+      "n": 11,
+      "mean": -3.73,
+      "median": -3.84,
+      "min": -11.86,
+      "max": 4.92
+    },
+    "10d": {
+      "n": 10,
+      "mean": -6.96,
+      "median": -8.33,
+      "min": -16.09,
+      "max": 6.16
+    },
+    "20d": {
+      "n": 7,
+      "mean": -9.22,
+      "median": -8.24,
+      "min": -18.1,
+      "max": -2.29
+    }
+  },
+  "by_category": {
+    "Other": {
+      "gap": {
+        "n": 4,
+        "mean": 1.15,
+        "median": 1.14,
+        "min": 0.7,
+        "max": 1.63
+      },
+      "1d": {
+        "n": 4,
+        "mean": -0.53,
+        "median": -0.46,
+        "min": -2.3,
+        "max": 1.07
+      },
+      "3d": {
+        "n": 3,
+        "mean": -0.89,
+        "median": -0.41,
+        "min": -2.69,
+        "max": 0.43
+      },
+      "5d": {
+        "n": 3,
+        "mean": -0.75,
+        "median": -0.05,
+        "min": -2.47,
+        "max": 0.28
+      },
+      "10d": {
+        "n": 3,
+        "mean": -5.03,
+        "median": -10.59,
+        "min": -10.67,
+        "max": 6.16
+      },
+      "20d": {
+        "n": 3,
+        "mean": -5.55,
+        "median": -4.25,
+        "min": -10.1,
+        "max": -2.29
+      }
+    },
+    "Clinical Trial": {
+      "gap": {
+        "n": 5,
+        "mean": -2.59,
+        "median": -1.31,
+        "min": -11.95,
+        "max": 1.24
+      },
+      "1d": {
+        "n": 5,
+        "mean": -1.61,
+        "median": -0.82,
+        "min": -7.51,
+        "max": 1.75
+      },
+      "3d": {
+        "n": 5,
+        "mean": -3.05,
+        "median": -1.8,
+        "min": -7.59,
+        "max": 0.3
+      },
+      "5d": {
+        "n": 5,
+        "mean": -6.57,
+        "median": -4.53,
+        "min": -11.86,
+        "max": -3.51
+      },
+      "10d": {
+        "n": 5,
+        "mean": -10.6,
+        "median": -9.89,
+        "min": -16.09,
+        "max": -4.18
+      },
+      "20d": {
+        "n": 2,
+        "mean": -12.2,
+        "median": -12.2,
+        "min": -16.16,
+        "max": -8.24
+      }
+    },
+    "FDA Decision": {
+      "gap": {
+        "n": 8,
+        "mean": 1.37,
+        "median": 0.2,
+        "min": -0.03,
+        "max": 8.14
+      },
+      "1d": {
+        "n": 8,
+        "mean": -0.38,
+        "median": -0.91,
+        "min": -2.7,
+        "max": 3.09
+      },
+      "3d": {
+        "n": 5,
+        "mean": -1.9,
+        "median": -1.9,
+        "min": -4.81,
+        "max": 0.91
+      },
+      "5d": {
+        "n": 3,
+        "mean": -1.99,
+        "median": -3.91,
+        "min": -6.99,
+        "max": 4.92
+      },
+      "10d": {
+        "n": 2,
+        "mean": -0.77,
+        "median": -0.77,
+        "min": -2.21,
+        "max": 0.67
+      },
+      "20d": {
+        "n": 2,
+        "mean": -11.74,
+        "median": -11.74,
+        "min": -18.1,
+        "max": -5.38
+      }
+    },
+    "M&A/Deal": {
+      "gap": {
+        "n": 1,
+        "mean": 0.82,
+        "median": 0.82,
+        "min": 0.82,
+        "max": 0.82
+      },
+      "1d": {
+        "n": 1,
+        "mean": 1.13,
+        "median": 1.13,
+        "min": 1.13,
+        "max": 1.13
+      },
+      "3d": {
+        "n": 1,
+        "mean": -2.66,
+        "median": -2.66,
+        "min": -2.66,
+        "max": -2.66
+      },
+      "5d": {
+        "n": 0
+      },
+      "10d": {
+        "n": 0
+      },
+      "20d": {
+        "n": 0
+      }
+    }
+  },
+  "by_day1_sign": {
+    "down": {
+      "gap": {
+        "n": 10,
+        "mean": -1.02,
+        "median": 0.13,
+        "min": -11.95,
+        "max": 1.25
+      },
+      "1d": {
+        "n": 10,
+        "mean": -2.32,
+        "median": -2.02,
+        "min": -7.51,
+        "max": -0.08
+      },
+      "3d": {
+        "n": 7,
+        "mean": -3.8,
+        "median": -3.42,
+        "min": -7.59,
+        "max": -0.13
+      },
+      "5d": {
+        "n": 6,
+        "mean": -6.48,
+        "median": -5.76,
+        "min": -11.86,
+        "max": -2.47
+      },
+      "10d": {
+        "n": 5,
+        "mean": -9.13,
+        "median": -9.89,
+        "min": -16.09,
+        "max": -2.21
+      },
+      "20d": {
+        "n": 3,
+        "mean": -12.84,
+        "median": -16.16,
+        "min": -18.1,
+        "max": -4.25
+      }
+    },
+    "up": {
+      "gap": {
+        "n": 8,
+        "mean": 1.7,
+        "median": 0.93,
+        "min": 0.1,
+        "max": 8.14
+      },
+      "1d": {
+        "n": 8,
+        "mean": 1.4,
+        "median": 1.12,
+        "min": 0.79,
+        "max": 3.09
+      },
+      "3d": {
+        "n": 7,
+        "mean": -0.5,
+        "median": -0.29,
+        "min": -2.66,
+        "max": 0.91
+      },
+      "5d": {
+        "n": 5,
+        "mean": -0.44,
+        "median": -0.05,
+        "min": -3.84,
+        "max": 4.92
+      },
+      "10d": {
+        "n": 5,
+        "mean": -4.8,
+        "median": -4.18,
+        "min": -16.06,
+        "max": 6.16
+      },
+      "20d": {
+        "n": 4,
+        "mean": -6.5,
+        "median": -6.81,
+        "min": -10.1,
+        "max": -2.29
+      }
+    }
+  },
+  "events": [
+    {
+      "ticker": "LLY",
+      "date": "2026-04-01",
+      "category": "Other",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": 1.25,
+        "1d": -2.3,
+        "3d": -2.69,
+        "5d": -2.47,
+        "10d": -10.67,
+        "20d": -4.25
+      }
+    },
+    {
+      "ticker": "ARQT",
+      "date": "2026-04-27",
+      "category": "Other",
+      "day1_sign": "up",
+      "abnormal": {
+        "gap": 1.63,
+        "1d": 0.86,
+        "3d": 0.43,
+        "5d": -0.05,
+        "10d": -10.59,
+        "20d": -10.1
+      }
+    },
+    {
+      "ticker": "REGN",
+      "date": "2026-05-16",
+      "category": "Clinical Trial",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": -11.95,
+        "1d": -7.51,
+        "3d": -7.59,
+        "5d": -9.11,
+        "10d": -16.09,
+        "20d": -16.16
+      }
+    },
+    {
+      "ticker": "REGN",
+      "date": "2026-05-18",
+      "category": "Clinical Trial",
+      "day1_sign": "up",
+      "abnormal": {
+        "gap": 0.43,
+        "1d": 0.79,
+        "3d": -1.8,
+        "5d": -3.51,
+        "10d": -4.18,
+        "20d": -8.24
+      }
+    },
+    {
+      "ticker": "VRTX",
+      "date": "2026-05-21",
+      "category": "Other",
+      "day1_sign": "up",
+      "abnormal": {
+        "gap": 1.03,
+        "1d": 1.07,
+        "3d": -0.41,
+        "5d": 0.28,
+        "10d": 6.16,
+        "20d": -2.29
+      }
+    },
+    {
+      "ticker": "GILD",
+      "date": "2026-05-22",
+      "category": "FDA Decision",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": 0.05,
+        "1d": -1.75,
+        "3d": -1.9,
+        "5d": -3.91,
+        "10d": -2.21,
+        "20d": -18.1
+      }
+    },
+    {
+      "ticker": "VRTX",
+      "date": "2026-06-01",
+      "category": "FDA Decision",
+      "day1_sign": "up",
+      "abnormal": {
+        "gap": 0.19,
+        "1d": 1.35,
+        "3d": 0.91,
+        "5d": 4.92,
+        "10d": 0.67,
+        "20d": -5.38
+      }
+    },
+    {
+      "ticker": "LLY",
+      "date": "2026-06-06",
+      "category": "Clinical Trial",
+      "day1_sign": "up",
+      "abnormal": {
+        "gap": 1.24,
+        "1d": 1.75,
+        "3d": 0.3,
+        "5d": -3.84,
+        "10d": -16.06
+      }
+    },
+    {
+      "ticker": "VRTX",
+      "date": "2026-06-11",
+      "category": "Clinical Trial",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": -1.31,
+        "1d": -0.82,
+        "3d": -0.13,
+        "5d": -4.53,
+        "10d": -6.77
+      }
+    },
+    {
+      "ticker": "LLY",
+      "date": "2026-06-13",
+      "category": "Clinical Trial",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": -1.38,
+        "1d": -2.27,
+        "3d": -6.04,
+        "5d": -11.86,
+        "10d": -9.89
+      }
+    },
+    {
+      "ticker": "GILD",
+      "date": "2026-06-23",
+      "category": "FDA Decision",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": 0.21,
+        "1d": -1.73,
+        "3d": -3.42,
+        "5d": -6.99
+      }
+    },
+    {
+      "ticker": "IONS",
+      "date": "2026-06-24",
+      "category": "FDA Decision",
+      "day1_sign": "up",
+      "abnormal": {
+        "gap": 0.1,
+        "1d": 1.12,
+        "3d": -0.29
+      }
+    },
+    {
+      "ticker": "GILD",
+      "date": "2026-06-24",
+      "category": "FDA Decision",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": -0.03,
+        "1d": -2.31,
+        "3d": -4.81
+      }
+    },
+    {
+      "ticker": "IONS",
+      "date": "2026-06-25",
+      "category": "M&A/Deal",
+      "day1_sign": "up",
+      "abnormal": {
+        "gap": 0.82,
+        "1d": 1.13,
+        "3d": -2.66
+      }
+    },
+    {
+      "ticker": "VRDN",
+      "date": "2026-06-26",
+      "category": "FDA Decision",
+      "day1_sign": "up",
+      "abnormal": {
+        "gap": 8.14,
+        "1d": 3.09
+      }
+    },
+    {
+      "ticker": "LLY",
+      "date": "2026-06-26",
+      "category": "FDA Decision",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": 1.14,
+        "1d": -0.08
+      }
+    },
+    {
+      "ticker": "ARQT",
+      "date": "2026-06-29",
+      "category": "FDA Decision",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": 1.14,
+        "1d": -2.7
+      }
+    },
+    {
+      "ticker": "VRDN",
+      "date": "2026-06-29",
+      "category": "Other",
+      "day1_sign": "down",
+      "abnormal": {
+        "gap": 0.7,
+        "1d": -1.77
+      }
+    }
+  ]
+}

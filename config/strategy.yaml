@@ -14,6 +14,17 @@ entry_window_days: 10             # Only act when catalyst is within N calendar 
 pre_catalyst_exit_days: 1         # Exit N days before catalyst (unless hold_through)
 default_hold_through_catalyst: false
 
+# --- Exits (research-backed: see src/backtest/exit_study.py) ---
+# The exit study + literature show post-catalyst benchmark-adjusted returns FADE
+# (edge is in the gap + first 1-2 days; holding 10-20d is a net loser). So we let
+# winners run with a TRAILING stop rather than a fixed take-profit, keep a hard
+# stop-loss floor, and optionally exit a fixed number of days after the catalyst.
+use_stop_loss: true               # Hard catastrophic floor (tiers in risk_manager)
+use_take_profit: false            # Off: don't cap winners; trailing stop protects gains
+trailing_stop_enabled: true
+trailing_stop_pct: 0.12           # Exit if price falls 12% from its high-water mark
+post_catalyst_exit_days: null     # e.g. 5 -> exit 5 trading days after catalyst (null = off; trailing handles it)
+
 trade_decider_model: gemini-2.0-flash
 position_manager_interval_min: 5
 
