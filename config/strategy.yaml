@@ -1,21 +1,56 @@
 # Algorithmic biotech catalyst trading guardrails
 # Research (Claude weekly brief) is separate from execution (free Gemini decider).
 
-max_position_pct: 0.05          # Max 5% of portfolio per trade
-max_total_exposure_pct: 0.25      # Max 25% of portfolio across all open positions
+# --- Position + exposure caps (PAPER / validation profile) ---
+# These are intentionally conservative so paper trading stays a clean validator.
+# For a small REAL account where you want full capital utilization, see the
+# "FULL DEPLOYMENT PROFILE" block at the bottom and copy those values up here.
+max_position_pct: 0.05            # Max 5% of portfolio in any single ticker
+max_total_exposure_pct: 0.25      # Max 25% of portfolio deployed across all positions
 max_open_positions: 5
 max_daily_loss_pct: 0.02          # Stop trading if unrealized loss exceeds 2%
 
-entry_window_days: 10             # Enter only when catalyst is within N calendar days
+entry_window_days: 10             # Only act when catalyst is within N calendar days
 pre_catalyst_exit_days: 1         # Exit N days before catalyst (unless hold_through)
 default_hold_through_catalyst: false
 
 trade_decider_model: gemini-2.0-flash
 position_manager_interval_min: 5
 
-# Size tiers returned by the free-model trade decider
+# --- Scale-to-target rebalancing ---
+# Each run, the bot sizes every eligible high-conviction name to a target % of
+# the portfolio derived from conviction, then tops up toward that target.
+# Target scales linearly: conviction `rebalance_min_conviction` -> target_floor_pct,
+# conviction 100 -> max_position_pct.
+rebalance_enabled: true
+rebalance_min_conviction: 70      # Only size/top-up names at/above this conviction
+target_floor_pct: 0.02            # Target for a just-barely-high-conviction name
+rebalance_min_delta_pct: 0.01     # Skip top-ups smaller than 1% of portfolio (no dust)
+rebalance_allow_trim: false       # Default: ratchet UP to target, never trim winners
+
+# --- Order execution ---
+# Fractional/notional orders let small accounts afford expensive names (e.g. LLY)
+# and fully deploy capital. Tradeoff: fractional orders use TIF=day market (no IOC
+# slippage protection). Keep off for paper; turn on for a small real account.
+allow_fractional: false
+min_order_notional: 1.0           # Don't submit orders below $1
+
+# Size tiers returned by the free-model trade decider (multiplies the target)
 size_tier_multipliers:
   full: 1.0
   half: 0.5
   quarter: 0.25
   none: 0.0
+
+# ============================================================================
+# FULL DEPLOYMENT PROFILE (for a small real account, e.g. ~$5k)
+# Copy these over the values above when you fund real money and want all of it
+# working. Fractional ON means any share price is affordable and cash is fully
+# utilized across your high-conviction names.
+#
+#   max_position_pct: 0.25
+#   max_total_exposure_pct: 0.90
+#   max_open_positions: 4
+#   target_floor_pct: 0.10
+#   allow_fractional: true
+# ============================================================================

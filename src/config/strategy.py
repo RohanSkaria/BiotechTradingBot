@@ -20,6 +20,15 @@ DEFAULTS = {
     "default_hold_through_catalyst": False,
     "trade_decider_model": "gemini-2.0-flash",
     "position_manager_interval_min": 5,
+    # Scale-to-target rebalancing
+    "rebalance_enabled": True,
+    "rebalance_min_conviction": 70,
+    "target_floor_pct": 0.02,
+    "rebalance_min_delta_pct": 0.01,
+    "rebalance_allow_trim": False,
+    # Order execution
+    "allow_fractional": False,
+    "min_order_notional": 1.0,
     "size_tier_multipliers": {
         "full": 1.0,
         "half": 0.5,

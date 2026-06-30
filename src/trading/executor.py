@@ -152,6 +152,7 @@ def submit_order(
     order_type: str = "market",
     time_in_force: str = "ioc",  # Changed to IOC for biotech safety
     limit_price: float = None,
+    notional: float = None,
 ) -> Optional[dict]:
     """
     Submit an order to Alpaca paper trading.
@@ -160,31 +161,44 @@ def submit_order(
     on low-volume biotech stocks. If the order can't be filled immediately
     at a reasonable price, it cancels instead of sitting in the order book.
 
+    FRACTIONAL/NOTIONAL: If `notional` (dollar amount) is provided, Alpaca
+    requires a market order with TIF=day (IOC/FOK are not allowed for
+    fractional/notional). This lets small accounts afford expensive names and
+    fully deploy capital, at the cost of IOC slippage protection.
+
     Args:
         ticker: Stock symbol
-        qty: Number of shares (can be fractional)
+        qty: Number of shares (can be fractional). Ignored if notional is set.
         side: "buy" or "sell"
         order_type: "market", "limit", etc.
         time_in_force: "ioc" (default), "fok", "day", "gtc"
-            - ioc: Immediate or Cancel - fills what it can immediately, cancels rest
-            - fok: Fill or Kill - must fill entire order or cancel
-            - day: Good for the day
         limit_price: Required for limit orders
+        notional: Dollar amount for a fractional/notional order (buy side)
 
     Returns:
         Order response dict, or None on error.
     """
-    payload = {
-        "symbol": ticker,
-        "qty": str(qty),
-        "side": side,
-        "type": order_type,
-        "time_in_force": time_in_force,
-    }
-
-    # Add limit price if provided (for limit orders)
-    if limit_price is not None and order_type == "limit":
-        payload["limit_price"] = str(limit_price)
+    if notional is not None:
+        # Fractional/notional orders must be market + day.
+        payload = {
+            "symbol": ticker,
+            "notional": str(round(float(notional), 2)),
+            "side": side,
+            "type": "market",
+            "time_in_force": "day",
+        }
+        order_desc = f"${float(notional):.2f} notional"
+    else:
+        payload = {
+            "symbol": ticker,
+            "qty": str(qty),
+            "side": side,
+            "type": order_type,
+            "time_in_force": time_in_force,
+        }
+        if limit_price is not None and order_type == "limit":
+            payload["limit_price"] = str(limit_price)
+        order_desc = f"{qty} shares (TIF={time_in_force})"
 
     try:
         resp = requests.post(
@@ -195,8 +209,8 @@ def submit_order(
             order = resp.json()
             status = order.get('status', 'unknown')
             filled_qty = order.get('filled_qty', '0')
-            print(f"  [ALPACA] Order submitted: {side} {qty} {ticker} "
-                  f"(TIF={time_in_force}) -> {order.get('id', 'N/A')[:8]}... "
+            print(f"  [ALPACA] Order submitted: {side} {order_desc} {ticker} "
+                  f"-> {order.get('id', 'N/A')[:8]}... "
                   f"status={status}, filled={filled_qty}")
             return order
         else:

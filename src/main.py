@@ -35,6 +35,7 @@ from src.trading.risk_manager import (
 )
 from src.trading.slippage_log import log_slippage_async
 from src.trading.brief_trader import trade_from_brief
+from src.trading.rebalancer import rebalance_from_brief
 from src.trading.position_manager import manage_positions
 from src.config.strategy import load_strategy
 from src.alerts.discord import send_trade_alert, send_system_alert, send_daily_summary
@@ -253,17 +254,19 @@ def scheduled_clinical_tracker():
 
 def scheduled_brief_trade():
     """
-    Weekday entry check: act on brief signals within catalyst entry window.
-    Free Gemini decider gates each order; Claude brief is research-only.
+    Weekday scale-to-target check: size every eligible high-conviction name to
+    its conviction-based target and top up toward it (this both enters NEW names
+    and increases EXISTING ones as conviction rises). Free Gemini decider gates
+    each order; Claude brief is research-only.
     """
     try:
         print("\n" + "=" * 60)
-        print("⏰ SCHEDULED: Brief Trade Entry (Mon-Fri 9:35 AM EST)")
+        print("⏰ SCHEDULED: Scale-to-Target Rebalance (Mon-Fri 9:35 AM EST)")
         print("=" * 60)
-        trade_from_brief(high_conviction_only=True, send_discord=True)
+        rebalance_from_brief(dry_run=False, send_discord=True)
     except Exception as e:
-        print(f"  [ERROR] Brief trade failed: {e}")
-        send_system_alert("Brief Trade Failed", str(e)[:500])
+        print(f"  [ERROR] Rebalance failed: {e}")
+        send_system_alert("Rebalance Failed", str(e)[:500])
 
 
 def scheduled_position_manager():
@@ -335,7 +338,7 @@ def run_bot():
         f"Portfolio: ${portfolio:,.2f}\n"
         f"Dexter Weekly Brief: Monday 6:00 AM EST (Claude research)\n"
         f"Dexter Daily Pulse: Tue-Fri 6:30 AM EST\n"
-        f"Brief Trade Entry: Mon-Fri 9:35 AM EST (free Gemini decider)\n"
+        f"Scale-to-Target Rebalance: Mon-Fri 9:35 AM EST (free Gemini decider)\n"
         f"Position Manager: every {pm_interval} min (market hours)\n"
         f"Clinical Tracker: Every 6 hours"
     )
@@ -343,7 +346,7 @@ def run_bot():
     print(f"Portfolio value: ${portfolio:,.2f}")
     print(f"Dexter Weekly Brief: Monday 6:00 AM EST (Claude research)")
     print(f"Dexter Daily Pulse: Tue-Fri 6:30 AM EST")
-    print(f"Brief Trade Entry: Mon-Fri 9:35 AM EST (free Gemini decider)")
+    print(f"Scale-to-Target Rebalance: Mon-Fri 9:35 AM EST (free Gemini decider)")
     print(f"Position Manager: every {pm_interval} min")
     print(f"Clinical Tracker: Every 6 hours")
     print(f"Press Ctrl+C to stop.\n")
@@ -385,7 +388,9 @@ def run_bot():
         name='Clinical Trial Status Tracker'
     )
 
-    # Job 4: Brief Trade Entry (Mon-Fri 9:35 AM EST)
+    # Job 4: Scale-to-Target Rebalance (Mon-Fri 9:35 AM EST)
+    # Enters NEW high-conviction names and tops up EXISTING ones toward their
+    # conviction-based target. Idempotent: no-op once a name is at target.
     scheduler.add_job(
         scheduled_brief_trade,
         CronTrigger(
@@ -395,7 +400,7 @@ def run_bot():
             timezone='America/New_York'
         ),
         id='brief_trade',
-        name='Brief Trade Entry (free-model gate)'
+        name='Scale-to-Target Rebalance (free-model gate)'
     )
 
     # Job 5: Position Manager (every N minutes — exits on stop/TP/pre-catalyst)
@@ -466,6 +471,13 @@ def run_position_manager_now(dry_run: bool = False):
     manage_positions(dry_run=dry_run, send_discord=True)
 
 
+def run_rebalance_now(dry_run: bool = False):
+    """Scale every eligible name to its conviction-based target (enter + top up)."""
+    init_db()
+    migrate_phase2()
+    rebalance_from_brief(dry_run=dry_run, send_discord=True)
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Biotech Trading Bot")
@@ -485,6 +497,10 @@ if __name__ == "__main__":
                         help="Run position manager once and exit")
     parser.add_argument("--positions-dry-run", action="store_true",
                         help="Preview position exits without closing")
+    parser.add_argument("--rebalance", action="store_true",
+                        help="Scale-to-target rebalance now (enter new + top up existing) and exit")
+    parser.add_argument("--rebalance-dry-run", action="store_true",
+                        help="Preview scale-to-target rebalance without ordering")
     parser.add_argument("--interval", type=int, default=60, help="Poll interval in seconds")
     parser.add_argument("--lookback", type=int, default=1, help="EDGAR lookback in days")
     args = parser.parse_args()
@@ -502,6 +518,8 @@ if __name__ == "__main__":
         run_clinical_now()
     elif args.brief_trade or args.brief_dry_run:
         run_brief_trade_now(dry_run=args.brief_dry_run, aggressive=args.aggressive, top_n=args.top)
+    elif args.rebalance or args.rebalance_dry_run:
+        run_rebalance_now(dry_run=args.rebalance_dry_run)
     elif args.positions or args.positions_dry_run:
         run_position_manager_now(dry_run=args.positions_dry_run)
     else:
